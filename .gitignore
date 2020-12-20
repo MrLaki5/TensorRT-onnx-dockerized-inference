@@ -1,0 +1,3 @@
+# Ignore docker deb install files
+*.deb
+
