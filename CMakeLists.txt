@@ -9,6 +9,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 
 find_package(CUDA)
+find_package(OpenCV)
 
 message("Cuda libs: " ${CUDA_TOOLKIT_ROOT_DIR})
 link_directories(${CUDA_TOOLKIT_ROOT_DIR}/targets/x86_64-linux/lib)
@@ -21,7 +22,10 @@ add_library(${LIB} SHARED ${SRC})
 # Include header files
 target_include_directories(${LIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
                                   PUBLIC ${CUDA_INCLUDE_DIRS})
-target_link_libraries(${LIB} PRIVATE cudart nvinfer nvonnxparser)
+target_link_libraries(${LIB} PRIVATE cudart 
+                             PRIVATE nvinfer 
+                             PRIVATE nvonnxparser
+                             PRIVATE ${OpenCV_LIBS})
 
 
 set(BIN "tensorrt-engine-test")

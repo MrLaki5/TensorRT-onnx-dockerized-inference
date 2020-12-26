@@ -1,4 +1,5 @@
 #include "trt_engine.hpp"
+#include "object_detector.hpp"
 
 
 int main()
@@ -9,6 +10,7 @@ int main()
         std::cout << "Model converted!" << std::endl;
 
         TRTEngine engine;
+        ObjectDetector object_detector;
         bool init_status = engine.init("retinanet-9.trt");
         if (init_status)
         {
