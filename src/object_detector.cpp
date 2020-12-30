@@ -7,7 +7,10 @@
 
 void* ObjectDetector::preprocess(void* data, int width, int height)
 {
-    cv::Mat frame;
+    // Every color is 8b and there are 3 channels so we use CV_8UC3
+    cv::Mat frame = cv::Mat(height, width, CV_8UC3, data);
+    // OpenCV needs BGR and we are getting RGB so we need to switch channels
+    cv::cvtColor(frame, frame, cv::COLOR_RGB2BGR);
 
     cv::cuda::GpuMat gpu_frame;
     // Upload image to GPU
@@ -26,6 +29,14 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
     cv::cuda::subtract(flt_image, cv::Scalar(0.485f, 0.456f, 0.406f), flt_image, cv::noArray(), -1);
     // Devide std
     cv::cuda::divide(flt_image, cv::Scalar(0.229f, 0.224f, 0.225f), flt_image, 1, -1);
+
+    // Convert image to CHW format that is input for tensorRT
+    std::vector<cv::cuda::GpuMat> chw;
+    for (size_t i = 0; i < 3; ++i)
+    {
+        chw.emplace_back(cv::cuda::GpuMat(input_size, CV_32FC1, gpu_input + i * input_width * input_height));
+    }
+    cv::cuda::split(flt_image, chw);
 
     return nullptr;
 }
