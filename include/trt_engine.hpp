@@ -21,6 +21,13 @@ class TRTEngine
 {
     public:
 
+        struct Dimensions
+        {
+            int width;
+            int height;
+            int channels;
+        };
+
         TRTEngine();
 
         ~TRTEngine();
@@ -41,9 +48,21 @@ class TRTEngine
         /// @return return the output of inference
         std::vector<float> inference(float* image, int image_size);
 
+        /// Get input dimensions of loaded model
+        /// @return return input model dimensions
+        Dimensions get_input_dimensions();
+
+        /// Get output dimensions of loaded model
+        /// @return return output model dimensions
+        Dimensions get_output_dimensions();
+
     private:
         std::mutex _engine_mutex;
         bool _engine_init_status = false;
         nvinfer1::IRuntime* _runtime = nullptr;
         nvinfer1::ICudaEngine* _engine = nullptr;
+        int _input_index;
+        int _output_index;
+        nvinfer1::Dims _input_dimensions;
+        nvinfer1::Dims _output_dimensions;
 };

@@ -39,48 +39,35 @@ std::vector<float> TRTEngine::inference(float* image, int image_size)
     nvinfer1::IExecutionContext* context = this->_engine->createExecutionContext();
     this->_engine_mutex.unlock();
 
-    // Get input and output buffer indexes
-    int input_index = 0;
-    int output_index = 1;
-    if (!this->_engine->bindingIsInput(0))
-    {
-        input_index = 1;
-        output_index = 0;
-    }
-
-    // Get input and output buffer dimensions
-    nvinfer1::Dims input_dims = this->_engine->getBindingDimensions(input_index);
-    nvinfer1::Dims output_dims = this->_engine->getBindingDimensions(output_index);
-
     // Create buffers
     std::vector<void*> buffers(2);
 
     // Allocate GPU buffers for input and output
-    cudaMalloc(&buffers[input_index], get_size_by_dim(input_dims) * sizeof(float));
-    cudaMalloc(&buffers[output_index], get_size_by_dim(output_dims) * sizeof(float));
+    cudaMalloc(&buffers[this->_input_index], get_size_by_dim(this->_input_dimensions) * sizeof(float));
+    cudaMalloc(&buffers[this->_output_index], get_size_by_dim(this->_output_dimensions) * sizeof(float));
 
     // Copy input image from CPU to GPU
-    cudaMemcpy(buffers[input_index], image, image_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(buffers[this->_input_index], image, image_size, cudaMemcpyHostToDevice);
 
     // Do inference
     bool inference_status = context->executeV2(buffers.data());
     if (!inference_status)
     {
         // Free memory
-        cudaFree(buffers[input_index]);
-        cudaFree(buffers[output_index]);
+        cudaFree(buffers[this->_input_index]);
+        cudaFree(buffers[this->_output_index]);
         context->destroy();
 
         return std::vector<float>();
     }
     
     // Copy inference results from GPU to CPU
-    std::vector<float> cpu_output(get_size_by_dim(output_dims));
-    cudaMemcpy(cpu_output.data(), (float*)buffers[output_index], cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
+    std::vector<float> cpu_output(get_size_by_dim(this->_output_dimensions));
+    cudaMemcpy(cpu_output.data(), (float*)buffers[this->_output_index], cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
 
     // Free memory
-    cudaFree(buffers[input_index]);
-    cudaFree(buffers[output_index]);
+    cudaFree(buffers[this->_input_index]);
+    cudaFree(buffers[this->_output_index]);
     context->destroy();
 
     return cpu_output;
@@ -122,9 +109,44 @@ bool TRTEngine::init(std::string trt_model_file)
         return false;
     }
 
+    // Get input and output buffer indexes
+    this->_input_index = 0;
+    this->_output_index = 1;
+    if (!this->_engine->bindingIsInput(0))
+    {
+        this->_input_index = 1;
+        this->_output_index = 0;
+    }
+
+    // Get input and output buffer dimensions
+    this->_input_dimensions = this->_engine->getBindingDimensions(this->_input_index);
+    this->_output_dimensions = this->_engine->getBindingDimensions(this->_output_index);
+
     delete model_data;
     this->_engine_init_status = true;
     return true;
+}
+
+TRTEngine::Dimensions TRTEngine::get_input_dimensions()
+{
+    TRTEngine::Dimensions ret_dimensions;
+
+    ret_dimensions.width = this->_input_dimensions.d[2];
+    ret_dimensions.height = this->_input_dimensions.d[1];
+    ret_dimensions.channels = this->_input_dimensions.d[0];
+
+    return ret_dimensions;
+}
+
+TRTEngine::Dimensions TRTEngine::get_output_dimensions()
+{
+    TRTEngine::Dimensions ret_dimensions;
+
+    ret_dimensions.width = this->_output_dimensions.d[2];
+    ret_dimensions.height = this->_output_dimensions.d[1];
+    ret_dimensions.channels = this->_output_dimensions.d[0];
+
+    return ret_dimensions;
 }
 
 bool TRTEngine::convert_onnx_to_trt_model(std::string input_model_file, std::string output_model_file)

@@ -30,6 +30,11 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
     // Devide std
     cv::cuda::divide(flt_image, cv::Scalar(0.229f, 0.224f, 0.225f), flt_image, 1, -1);
 
+    // TODO: add input model sizes
+    int input_height = 100;
+    int input_width = 100;
+    void* gpu_input;
+
     // Convert image to CHW format that is input for tensorRT
     std::vector<cv::cuda::GpuMat> chw;
     for (size_t i = 0; i < 3; ++i)
