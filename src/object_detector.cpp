@@ -53,3 +53,9 @@ void* ObjectDetector::postprocess(void* data)
 {
     return nullptr;
 }
+
+void ObjectDetector::execute(void* data, int width, int height)
+{
+    void* input_buffer = this->preprocess(data, width, height);
+    std::vector<float> output_buffer = this->_engine.inference(input_buffer);
+}

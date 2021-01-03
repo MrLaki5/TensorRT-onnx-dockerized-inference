@@ -21,7 +21,8 @@ file(GLOB SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 add_library(${LIB} SHARED ${SRC})
 # Include header files
 target_include_directories(${LIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-                                  PUBLIC ${CUDA_INCLUDE_DIRS})
+                                  PUBLIC ${CUDA_INCLUDE_DIRS}
+                                  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ext/pkg-json)
 target_link_libraries(${LIB} PRIVATE cudart 
                              PRIVATE nvinfer 
                              PRIVATE nvonnxparser
