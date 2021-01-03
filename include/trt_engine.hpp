@@ -14,7 +14,7 @@ class Logger : public nvinfer1::ILogger
             if (severity != Severity::kINFO)
                 std::cout << msg << std::endl;
         }
-} gLogger;
+};
 
 
 class TRTEngine
@@ -43,10 +43,16 @@ class TRTEngine
         /// @return return the status of init
         bool init(std::string trt_model_file);
 
-        /// Inference of input image with init model
-        /// @param image byte data input image
+        /// Inference of input image with init model from buffer on CPU
+        /// @param image pointer to image buffer loaded on CPU
+        /// @param image_size size of image
         /// @return return the output of inference
         std::vector<float> inference(float* image, int image_size);
+
+        /// Inference of input image with init model from buffer loaded on GPU
+        /// @param image pointer to image buffer loaded on GPU
+        /// @return return the output of inference
+        std::vector<float> inference(void* image);
 
         /// Get input dimensions of loaded model
         /// @return return input model dimensions
@@ -57,6 +63,7 @@ class TRTEngine
         Dimensions get_output_dimensions();
 
     private:
+        Logger _gLogger;
         std::mutex _engine_mutex;
         bool _engine_init_status = false;
         nvinfer1::IRuntime* _runtime = nullptr;

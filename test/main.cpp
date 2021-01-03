@@ -1,4 +1,3 @@
-#include "trt_engine.hpp"
 #include "object_detector.hpp"
 
 #include <fstream>

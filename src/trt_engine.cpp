@@ -34,6 +34,19 @@ std::size_t get_size_by_dim(const nvinfer1::Dims& dims)
 
 std::vector<float> TRTEngine::inference(float* image, int image_size)
 {
+    // Allocate GPU buffers for input
+    void* input_buffer;
+    cudaMalloc(&input_buffer, get_size_by_dim(this->_input_dimensions) * sizeof(float));
+    
+    // Copy input image from CPU to GPU
+    cudaMemcpy(input_buffer, image, image_size, cudaMemcpyHostToDevice);
+    
+    // Do inference
+    return this->inference(input_buffer);
+}
+
+std::vector<float> TRTEngine::inference(void* image)
+{
     // Create execution context
     this->_engine_mutex.lock();
     nvinfer1::IExecutionContext* context = this->_engine->createExecutionContext();
@@ -41,13 +54,10 @@ std::vector<float> TRTEngine::inference(float* image, int image_size)
 
     // Create buffers
     std::vector<void*> buffers(2);
+    buffers[this->_input_index] = image;
 
-    // Allocate GPU buffers for input and output
-    cudaMalloc(&buffers[this->_input_index], get_size_by_dim(this->_input_dimensions) * sizeof(float));
+    // Allocate GPU buffers for output
     cudaMalloc(&buffers[this->_output_index], get_size_by_dim(this->_output_dimensions) * sizeof(float));
-
-    // Copy input image from CPU to GPU
-    cudaMemcpy(buffers[this->_input_index], image, image_size, cudaMemcpyHostToDevice);
 
     // Do inference
     bool inference_status = context->executeV2(buffers.data());
@@ -80,11 +90,11 @@ bool TRTEngine::init(std::string trt_model_file)
         return false;
     
     // Create runtime
-    this->_runtime = nvinfer1::createInferRuntime(gLogger);
+    this->_runtime = nvinfer1::createInferRuntime(this->_gLogger);
     if (!this->_runtime)
     {
         std::string msg = "Failed to create runtime";
-        gLogger.log(nvinfer1::ILogger::Severity::kERROR, msg.c_str());
+        this->_gLogger.log(nvinfer1::ILogger::Severity::kERROR, msg.c_str());
         return false;
     }
 
@@ -102,7 +112,7 @@ bool TRTEngine::init(std::string trt_model_file)
     if (!this->_engine)
     {
         std::string msg = "Failed to create engine";
-        gLogger.log(nvinfer1::ILogger::Severity::kERROR, msg.c_str());
+        this->_gLogger.log(nvinfer1::ILogger::Severity::kERROR, msg.c_str());
         this->_runtime->destroy();
         this->_runtime = nullptr;
         delete model_data;
@@ -151,6 +161,9 @@ TRTEngine::Dimensions TRTEngine::get_output_dimensions()
 
 bool TRTEngine::convert_onnx_to_trt_model(std::string input_model_file, std::string output_model_file)
 {
+    // Create logger
+    Logger gLogger;
+
     // Create builder
     nvinfer1::IBuilder* builder = nvinfer1::createInferBuilder(gLogger);
     if (!builder)

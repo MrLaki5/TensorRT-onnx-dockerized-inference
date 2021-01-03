@@ -4,6 +4,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/cudaarithm.hpp>
+#include <cuda_runtime.h>
 
 void* ObjectDetector::preprocess(void* data, int width, int height)
 {
@@ -16,7 +17,10 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
     // Upload image to GPU
     gpu_frame.upload(frame);
 
-    auto input_size = cv::Size(width, height);
+    // Load model input sizes
+    TRTEngine::Dimensions dimensions = this->_engine.get_input_dimensions();
+    cv::Size input_size = cv::Size(dimensions.width, dimensions.height);
+
     // Resize image
     cv::cuda::GpuMat resized;
     cv::cuda::resize(gpu_frame, resized, input_size, 0, 0, cv::INTER_NEAREST);
@@ -30,20 +34,19 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
     // Devide std
     cv::cuda::divide(flt_image, cv::Scalar(0.229f, 0.224f, 0.225f), flt_image, 1, -1);
 
-    // TODO: add input model sizes
-    int input_height = 100;
-    int input_width = 100;
-    void* gpu_input;
+    // Allocate memory for trt engine inference input
+    float* gpu_input;
+    cudaMalloc(&gpu_input, dimensions.channels * dimensions.width * dimensions.height * sizeof(float));
 
-    // Convert image to CHW format that is input for tensorRT
+    // Convert image to CHW format that is input for tensorRT and copy image to trt input buffer
     std::vector<cv::cuda::GpuMat> chw;
-    for (size_t i = 0; i < 3; ++i)
+    for (size_t i = 0; i < dimensions.channels; ++i)
     {
-        chw.emplace_back(cv::cuda::GpuMat(input_size, CV_32FC1, gpu_input + i * input_width * input_height));
+        chw.emplace_back(cv::cuda::GpuMat(input_size, CV_32FC1, gpu_input + i * dimensions.width * dimensions.height));
     }
     cv::cuda::split(flt_image, chw);
 
-    return nullptr;
+    return gpu_input;
 }
 
 void* ObjectDetector::postprocess(void* data)
