@@ -11,7 +11,7 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
     // Every color is 8b and there are 3 channels so we use CV_8UC3
     cv::Mat frame = cv::Mat(height, width, CV_8UC3, data);
     // OpenCV needs BGR and we are getting RGB so we need to switch channels
-    cv::cvtColor(frame, frame, cv::COLOR_RGB2BGR);
+    // cv::cvtColor(frame, frame, cv::COLOR_RGB2BGR);
 
     cv::cuda::GpuMat gpu_frame;
     // Upload image to GPU

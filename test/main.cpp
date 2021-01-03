@@ -15,9 +15,9 @@ int main()
         std::cout << "Detector init successful" << std::endl;
 
         int image_width = 1280;
-        int image_height = 720;
+        int image_height = 853;
         // Load image from file
-        std::ifstream p("test.rgb");  
+        std::ifstream p("cat.rgb");  
         p.seekg( 0, std::ios::end );  
         size_t image_size = p.tellg();  
         char* image_data = new char[image_size];  
