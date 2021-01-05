@@ -21,11 +21,14 @@ class TRTEngine
 {
     public:
 
-        struct Dimensions
+        struct Dimension
         {
-            int width;
-            int height;
-            int channels;
+            std::vector<int> dimension;
+        };
+
+        struct OutputBuffer
+        {
+            std::vector<float> buffer;
         };
 
         TRTEngine();
@@ -44,23 +47,23 @@ class TRTEngine
         bool init(std::string trt_model_file);
 
         /// Inference of input image with init model from buffer on CPU
-        /// @param image pointer to image buffer loaded on CPU
-        /// @param image_size size of image
+        /// @param input array of pointers to image buffer loaded on CPU
+        /// @param input_size size of image buffers
         /// @return return the output of inference
-        std::vector<float> inference(float* image, int image_size);
+        std::vector<OutputBuffer> inference(float* input[], int input_sizes[]);
 
         /// Inference of input image with init model from buffer loaded on GPU
-        /// @param image pointer to image buffer loaded on GPU
+        /// @param input array of pointers to image buffer loaded on GPU
         /// @return return the output of inference
-        std::vector<float> inference(void* image);
+        std::vector<OutputBuffer> inference(void* input[]);
 
         /// Get input dimensions of loaded model
         /// @return return input model dimensions
-        Dimensions get_input_dimensions();
+        std::vector<Dimension> get_input_dimensions();
 
         /// Get output dimensions of loaded model
         /// @return return output model dimensions
-        Dimensions get_output_dimensions();
+        std::vector<Dimension> get_output_dimensions();
 
     private:
         Logger _gLogger;
@@ -68,8 +71,8 @@ class TRTEngine
         bool _engine_init_status = false;
         nvinfer1::IRuntime* _runtime = nullptr;
         nvinfer1::ICudaEngine* _engine = nullptr;
-        int _input_index;
-        int _output_index;
-        nvinfer1::Dims _input_dimensions;
-        nvinfer1::Dims _output_dimensions;
+        std::vector<int> _input_indexes;
+        std::vector<int> _output_indexes;
+        std::vector<nvinfer1::Dims> _input_dimensions;
+        std::vector<nvinfer1::Dims> _output_dimensions;
 };

@@ -31,21 +31,23 @@ std::size_t get_size_by_dim(const nvinfer1::Dims& dims)
     return size;
 }
 
-
-std::vector<float> TRTEngine::inference(float* image, int image_size)
+std::vector<TRTEngine::OutputBuffer> TRTEngine::inference(float* input[], int input_sizes[])
 {
+    std::vector<void*> input_buffers(this->_input_dimensions.size());
+ 
     // Allocate GPU buffers for input
-    void* input_buffer;
-    cudaMalloc(&input_buffer, get_size_by_dim(this->_input_dimensions) * sizeof(float));
-    
-    // Copy input image from CPU to GPU
-    cudaMemcpy(input_buffer, image, image_size, cudaMemcpyHostToDevice);
+    for (int i = 0; i < this->_input_dimensions.size(); i++)
+    {
+        cudaMalloc(&input_buffers[i], get_size_by_dim(this->_input_dimensions[i]) * sizeof(float));
+        // Copy input image from CPU to GPU
+        cudaMemcpy(&input_buffers[i], input[i], input_sizes[i], cudaMemcpyHostToDevice);
+    }
     
     // Do inference
-    return this->inference(input_buffer);
+    return this->inference(input_buffers.data());
 }
 
-std::vector<float> TRTEngine::inference(void* image)
+std::vector<TRTEngine::OutputBuffer> TRTEngine::inference(void* input[])
 {
     // Create execution context
     this->_engine_mutex.lock();
@@ -53,34 +55,51 @@ std::vector<float> TRTEngine::inference(void* image)
     this->_engine_mutex.unlock();
 
     // Create buffers
-    std::vector<void*> buffers(2);
-    buffers[this->_input_index] = image;
+    std::vector<void*> buffers(this->_engine->getNbBindings());
+    
+    // Map input buffers
+    for (int i = 0; i < this->_input_indexes.size(); i++)
+    {
+        buffers[this->_input_indexes[i]] = input[i];
+    }
 
     // Allocate GPU buffers for output
-    cudaMalloc(&buffers[this->_output_index], get_size_by_dim(this->_output_dimensions) * sizeof(float));
+    for (int i = 0; i < this->_output_dimensions.size(); i++)
+    {
+        cudaMalloc(&buffers[this->_output_indexes[i]], get_size_by_dim(this->_output_dimensions[i]) * sizeof(float));
+    }
 
     // Do inference
     bool inference_status = context->executeV2(buffers.data());
     if (!inference_status)
     {
         // Free memory
-        cudaFree(buffers[this->_input_index]);
-        cudaFree(buffers[this->_output_index]);
+        for (int i=0; i < this->_engine->getNbBindings(); i++)
+        {
+            cudaFree(buffers[i]);
+        }
         context->destroy();
 
-        return std::vector<float>();
+        return std::vector<TRTEngine::OutputBuffer>();
     }
     
     // Copy inference results from GPU to CPU
-    std::vector<float> cpu_output(get_size_by_dim(this->_output_dimensions));
-    cudaMemcpy(cpu_output.data(), (float*)buffers[this->_output_index], cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
+    std::vector<TRTEngine::OutputBuffer> cpu_result(this->_output_dimensions.size());
+    for (int i = 0; i < this->_output_dimensions.size(); i++)
+    {
+        std::vector<float> cpu_output(get_size_by_dim(this->_output_dimensions[i]));
+        cudaMemcpy(cpu_output.data(), (float*)buffers[this->_output_indexes[i]], cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
+        cpu_result[i].buffer = cpu_output;
+    }
 
     // Free memory
-    cudaFree(buffers[this->_input_index]);
-    cudaFree(buffers[this->_output_index]);
+    for (int i=0; i < this->_engine->getNbBindings(); i++)
+    {
+        cudaFree(buffers[i]);
+    }
     context->destroy();
 
-    return cpu_output;
+    return cpu_result;
 }
 
 bool TRTEngine::init(std::string trt_model_file)
@@ -119,42 +138,56 @@ bool TRTEngine::init(std::string trt_model_file)
         return false;
     }
 
-    // Get input and output buffer indexes
-    this->_input_index = 0;
-    this->_output_index = 1;
-    if (!this->_engine->bindingIsInput(0))
+    // Get input and output buffer indexes and dimensions
+    for (size_t i = 0; i < this->_engine->getNbBindings(); i++)
     {
-        this->_input_index = 1;
-        this->_output_index = 0;
+        if (this->_engine->bindingIsInput(i))
+        {
+            this->_input_dimensions.emplace_back(this->_engine->getBindingDimensions(i));
+            this->_input_indexes.emplace_back(i);
+        }
+        else
+        {
+            this->_output_dimensions.emplace_back(this->_engine->getBindingDimensions(i));
+            this->_output_indexes.emplace_back(i);
+        }
     }
-
-    // Get input and output buffer dimensions
-    this->_input_dimensions = this->_engine->getBindingDimensions(this->_input_index);
-    this->_output_dimensions = this->_engine->getBindingDimensions(this->_output_index);
 
     delete model_data;
     this->_engine_init_status = true;
     return true;
 }
 
-TRTEngine::Dimensions TRTEngine::get_input_dimensions()
+std::vector<TRTEngine::Dimension> TRTEngine::get_input_dimensions()
 {
-    TRTEngine::Dimensions ret_dimensions;
+    std::vector<TRTEngine::Dimension> ret_dimensions;
 
-    ret_dimensions.width = this->_input_dimensions.d[2];
-    ret_dimensions.height = this->_input_dimensions.d[1];
-    ret_dimensions.channels = this->_input_dimensions.d[0];
+    for (int i = 0; i < this->_input_dimensions.size(); ++i)
+    {
+        TRTEngine::Dimension input_dimension;
+        for (std::size_t j = 0; j < this->_input_dimensions[i].nbDims; j++)
+        {
+            input_dimension.dimension.emplace_back(this->_input_dimensions[i].d[j]);
+        }
+        ret_dimensions.emplace_back(input_dimension);
+    }
 
     return ret_dimensions;
 }
 
-TRTEngine::Dimensions TRTEngine::get_output_dimensions()
+std::vector<TRTEngine::Dimension> TRTEngine::get_output_dimensions()
 {
-    TRTEngine::Dimensions ret_dimensions;
+    std::vector<TRTEngine::Dimension> ret_dimensions;
 
-    ret_dimensions.width = this->_output_dimensions.d[2];
-    ret_dimensions.height = this->_output_dimensions.d[1];
-    ret_dimensions.channels = this->_output_dimensions.d[0];
+    for (int i = 0; i < this->_output_dimensions.size(); ++i)
+    {
+        TRTEngine::Dimension output_dimension;
+        for (std::size_t j = 0; j < this->_output_dimensions[i].nbDims; j++)
+        {
+            output_dimension.dimension.emplace_back(this->_output_dimensions[i].d[j]);
+        }
+        ret_dimensions.emplace_back(output_dimension);
+    }
 
     return ret_dimensions;
 }
@@ -198,7 +231,9 @@ bool TRTEngine::convert_onnx_to_trt_model(std::string input_model_file, std::str
     // Create engine from parsed network
     nvinfer1::IBuilderConfig* config = builder->createBuilderConfig();
     // Maximum size that any layer in network can use
-    config->setMaxWorkspaceSize(1 << 20);
+    config->setMaxWorkspaceSize(1ULL << 30);
+    // Set max batch size to one image
+    builder->setMaxBatchSize(1);
     nvinfer1::ICudaEngine* engine = builder->buildEngineWithConfig(*network, *config);
     if (!engine)
     {

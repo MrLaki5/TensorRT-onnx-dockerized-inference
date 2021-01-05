@@ -18,8 +18,16 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
     gpu_frame.upload(frame);
 
     // Load model input sizes
-    TRTEngine::Dimensions dimensions = this->_engine.get_input_dimensions();
-    cv::Size input_size = cv::Size(dimensions.width, dimensions.height);
+    std::vector<TRTEngine::Dimension> dimensions = this->_engine.get_input_dimensions();
+    if (dimensions.size() < 1)
+    {
+        std::cout << "ObjectDetector: preprocess: warning: no input dimensions" << std::endl;
+        return nullptr;
+    }
+    int model_input_channels = dimensions[0].dimension[1];
+    int model_input_height = dimensions[0].dimension[2];
+    int model_input_width = dimensions[0].dimension[3];
+    cv::Size input_size = cv::Size(model_input_width, model_input_height);
 
     // Resize image
     cv::cuda::GpuMat resized;
@@ -36,13 +44,13 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
 
     // Allocate memory for trt engine inference input
     float* gpu_input;
-    cudaMalloc(&gpu_input, dimensions.channels * dimensions.width * dimensions.height * sizeof(float));
+    cudaMalloc(&gpu_input, model_input_channels * model_input_width * model_input_height * sizeof(float));
 
     // Convert image to CHW format that is input for tensorRT and copy image to trt input buffer
     std::vector<cv::cuda::GpuMat> chw;
-    for (size_t i = 0; i < dimensions.channels; ++i)
+    for (size_t i = 0; i < model_input_channels; ++i)
     {
-        chw.emplace_back(cv::cuda::GpuMat(input_size, CV_32FC1, gpu_input + i * dimensions.width * dimensions.height));
+        chw.emplace_back(cv::cuda::GpuMat(input_size, CV_32FC1, gpu_input + i * model_input_width * model_input_height));
     }
     cv::cuda::split(flt_image, chw);
 
@@ -57,5 +65,7 @@ void* ObjectDetector::postprocess(void* data)
 void ObjectDetector::execute(void* data, int width, int height)
 {
     void* input_buffer = this->preprocess(data, width, height);
-    std::vector<float> output_buffer = this->_engine.inference(input_buffer);
+    void* input_array[1];
+    input_array[0] = input_buffer;
+    std::vector<TRTEngine::OutputBuffer> output_buffer = this->_engine.inference(input_array);
 }
