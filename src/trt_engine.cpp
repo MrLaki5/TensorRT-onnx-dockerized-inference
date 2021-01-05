@@ -89,7 +89,7 @@ std::vector<TRTEngine::OutputBuffer> TRTEngine::inference(void* input[])
     {
         std::vector<float> cpu_output(get_size_by_dim(this->_output_dimensions[i]));
         cudaMemcpy(cpu_output.data(), (float*)buffers[this->_output_indexes[i]], cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
-        cpu_result[i].buffer = cpu_output;
+        cpu_result[i].buffer = std::move(cpu_output);
     }
 
     // Free memory
