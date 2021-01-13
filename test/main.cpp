@@ -1,15 +1,15 @@
-#include "object_detector.hpp"
+#include "image_classifier.hpp"
 
 #include <fstream>
 
 int main()
 {
     nlohmann::json detector_config;
-    detector_config["onnx_model_path"] = "retinanet-9.onnx";
-    detector_config["trt_model_path"] = "retinanet-9.trt";
+    detector_config["onnx_model_path"] = "resnet50-v1-7.onnx";
+    detector_config["trt_model_path"] = "resnet50-v1-7.trt";
 
-    ObjectDetector object_detector;
-    bool init_status = object_detector.init(detector_config);
+    ImageClassifier image_classifier;
+    bool init_status = image_classifier.init(detector_config);
     if (init_status)
     {
         std::cout << "Detector init successful" << std::endl;
@@ -31,7 +31,11 @@ int main()
         //    std::cout << (int)(temp_var) << std::endl;
         //}
 
-        object_detector.execute(image_data, image_width, image_height);
+        std::vector<float> result = image_classifier.execute(image_data, image_width, image_height);
+        for (int i=0; i < result.size(); i++)
+        {
+            std::cout << "Class " << i << ": " << result[i] << std::endl;
+        }
 
         delete image_data;
     }

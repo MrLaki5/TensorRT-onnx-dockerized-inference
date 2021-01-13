@@ -1,4 +1,4 @@
-#include "object_detector.hpp"
+#include "image_classifier.hpp"
 
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/core/mat.hpp>
@@ -6,7 +6,7 @@
 #include <opencv2/cudaarithm.hpp>
 #include <cuda_runtime.h>
 
-void* ObjectDetector::preprocess(void* data, int width, int height)
+void* ImageClassifier::preprocess(void* data, int width, int height)
 {
     // Every color is 8b and there are 3 channels so we use CV_8UC3
     cv::Mat frame = cv::Mat(height, width, CV_8UC3, data);
@@ -21,7 +21,7 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
     std::vector<TRTEngine::Dimension> dimensions = this->_engine.get_input_dimensions();
     if (dimensions.size() < 1)
     {
-        std::cout << "ObjectDetector: preprocess: warning: no input dimensions" << std::endl;
+        std::cout << "ImageClassifier: preprocess: warning: no input dimensions" << std::endl;
         return nullptr;
     }
     int model_input_channels = dimensions[0].dimension[1];
@@ -57,15 +57,30 @@ void* ObjectDetector::preprocess(void* data, int width, int height)
     return gpu_input;
 }
 
-void* ObjectDetector::postprocess(void* data)
+std::vector<float> ImageClassifier::postprocess(std::vector<TRTEngine::OutputBuffer> buffer)
 {
-    return nullptr;
+    std::transform(buffer[0].buffer.begin(), buffer[0].buffer.end(), buffer[0].buffer.begin(), [](float val) {return std::exp(val);});
+    float sum = std::accumulate(buffer[0].buffer.begin(), buffer[0].buffer.end(), 0.0);
+    if (sum > 0)
+    {
+        for (int i = 0; i < buffer[0].buffer.size(); i++)
+        {
+            buffer[0].buffer[i] /= sum;
+        }
+    }
+    return buffer[0].buffer;
 }
 
-void ObjectDetector::execute(void* data, int width, int height)
+std::vector<float> ImageClassifier::execute(void* data, int width, int height)
 {
     void* input_buffer = this->preprocess(data, width, height);
     void* input_array[1];
     input_array[0] = input_buffer;
     std::vector<TRTEngine::OutputBuffer> output_buffer = this->_engine.inference(input_array);
+    std::vector<float> return_vector;
+    if (output_buffer.size() > 0)
+    {
+        return_vector = this->postprocess(output_buffer);
+    }
+    return return_vector;
 }
