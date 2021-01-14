@@ -35,4 +35,5 @@ target_link_libraries(${BIN} PRIVATE ${LIB})
 target_include_directories(${BIN} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/resnet50-v1-7.onnx DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/resnet_classes.json DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/cat.rgb DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

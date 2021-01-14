@@ -59,6 +59,7 @@ void* ImageClassifier::preprocess(void* data, int width, int height)
 
 std::vector<float> ImageClassifier::postprocess(std::vector<TRTEngine::OutputBuffer> buffer)
 {
+    // Softmax function
     std::transform(buffer[0].buffer.begin(), buffer[0].buffer.end(), buffer[0].buffer.begin(), [](float val) {return std::exp(val);});
     float sum = std::accumulate(buffer[0].buffer.begin(), buffer[0].buffer.end(), 0.0);
     if (sum > 0)
