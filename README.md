@@ -16,7 +16,7 @@ cd ./docker
 ### ResNet50 inference test
 
 ``` bash
-./tensorrt-engine-test
+./ResNet50_test
 ```
 * [Input image](https://pixabay.com/photos/cat-siamese-cat-fur-kitten-2068462)
 * Output: Siamese cat, Siamese (confidence: 0.995392)
