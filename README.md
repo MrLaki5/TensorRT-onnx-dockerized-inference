@@ -4,8 +4,9 @@
 * <b>ResNet50</b> preprocessing and postprocessing implementation
 
 ### Quick docker setup:
+* Requirements are: [docker](https://docs.docker.com/get-docker/) and [nvidia-docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 * Download TensorRT 7 installation from [link](https://developer.nvidia.com/compute/machine-learning/tensorrt/secure/7.2.1/local_repos/nv-tensorrt-repo-ubuntu1804-cuda10.2-trt7.2.1.6-ga-20201006_1-1_amd64.deb)
-* Place downloaded deb file into root dir of this repo
+* Place downloaded TensorRT 7 deb file into root dir of this repo
 * Run:
 ``` bash
 cd ./docker
