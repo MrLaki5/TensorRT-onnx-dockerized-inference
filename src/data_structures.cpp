@@ -1,5 +1,7 @@
 #include "data_structures.hpp"
 
+#include <algorithm>
+
 //===============================
 // Point2D
 //===============================
@@ -107,4 +109,24 @@ inline void Rect::setWidth(const int& width)
 inline void Rect::setHeight(const int& height)
 {
     this->_height = height;
+}
+
+float Rect::iou(const Rect& rect) const
+{
+    // Find intersection area coordinates
+    float x_a = std::max(this->getX(), rect.getX());
+    float y_a = std::max(this->getY(), rect.getY());
+    float x_b = std::min(this->getX() + this->getWidth(), rect.getX() + rect.getWidth());
+    float y_b = std::min(this->getY() + this->getHeight(), rect.getY() + rect.getHeight());
+
+    // Calculate intersection area
+    float inter_area = (std::max(0.f, x_b - x_a + 1)) * (std::max(0.f, y_b - y_a + 1));
+
+    // Calculate rect areas
+    float rect1_area = (this->getWidth() + 1) * (this->getHeight() + 1);
+    float rect2_area = (rect.getWidth() + 1) * (rect.getHeight() + 1);
+
+    // Calculate intersection over union
+    float iou = inter_area / (rect1_area + rect2_area - inter_area);
+    return iou;
 }

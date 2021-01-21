@@ -55,4 +55,6 @@ class Rect
         void setWidth(const int& width);
 
         void setHeight(const int& height);
+
+        float iou(const Rect& rect) const;
 };
