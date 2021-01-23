@@ -39,5 +39,5 @@ RUN mkdir wspace
 COPY . ./wspace
 RUN mkdir build
 WORKDIR ./build
-RUN cmake -DBUILD_RESNET50_TEST=ON ../wspace
+RUN cmake -DBUILD_RESNET50_TEST=ON -DBUILD_ULTRAFACE_TEST=ON ../wspace
 RUN make install

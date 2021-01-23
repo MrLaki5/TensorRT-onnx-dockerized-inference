@@ -14,6 +14,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 # Build options
 #================================================================================
 option(BUILD_RESNET50_TEST "Build test binary for ResNet50 model" OFF)
+option(BUILD_ULTRAFACE_TEST "Build test binary for Ultraface model" OFF)
 
 #================================================================================
 # Find packages
@@ -55,9 +56,21 @@ if(BUILD_RESNET50_TEST)
     # Install test dataset
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/cat.rgb DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 endif()
+if(BUILD_ULTRAFACE_TEST)
+    set(BIN "Ultraface_test")
+    # Create executable
+    add_executable(${BIN} ${CMAKE_CURRENT_SOURCE_DIR}/test/Ultraface_test.cpp)
+    # Link libs
+    target_link_libraries(${BIN} PRIVATE ${LIB})
+    # Include header files
+    target_include_directories(${BIN} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    # Install test dataset
+    #install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/cat.rgb DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 #================================================================================
 # Install models and necesery extra files
 #================================================================================
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/models/Ultraface/ultraface-RFB-320.onnx DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/models/ResNet50/resnet50-v1-7.onnx DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/models/ResNet50/resnet_classes.json DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
