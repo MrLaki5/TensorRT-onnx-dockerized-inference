@@ -6,6 +6,12 @@
 #include <opencv2/cudaarithm.hpp>
 #include <cuda_runtime.h>
 
+FaceDetector::FaceDetector(int input_width, int input_length, float score_threshold_, float iou_threshold_)
+{
+
+    
+}
+
 void* FaceDetector::preprocess(void* data, int width, int height)
 {
     // Every color is 8b and there are 3 channels so we use CV_8UC3
@@ -57,18 +63,75 @@ void* FaceDetector::preprocess(void* data, int width, int height)
     return gpu_input;
 }
 
-std::vector<float> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer> buffer)
+std::vector<float> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer> buffer, int width, int height)
 {
-    // Softmax function
-    std::transform(buffer[0].buffer.begin(), buffer[0].buffer.end(), buffer[0].buffer.begin(), [](float val) {return std::exp(val);});
-    float sum = std::accumulate(buffer[0].buffer.begin(), buffer[0].buffer.end(), 0.0);
-    if (sum > 0)
-    {
-        for (int i = 0; i < buffer[0].buffer.size(); i++)
-        {
-            buffer[0].buffer[i] /= sum;
+    auto clip = [](float x, float y) {return (x < 0 ? 0 : (x > y ? y : x));};
+
+    w_h_list = {width, height};
+    int num_featuremap = 4;
+    std::vector<std::vector<float>> priors = {};
+    // TODO: see what should be values
+    float score_threshold = 0.5;
+
+    for (auto size : w_h_list) {
+        std::vector<float> fm_item;
+        for (float stride : this->_strides) {
+            fm_item.push_back(ceil(size / stride));
+        }
+        featuremap_size.push_back(fm_item);
+    }
+
+    for (auto size : w_h_list) {
+        shrinkage_size.push_back(this->_strides);
+    }
+    
+    // Generate anchors
+    for (int index = 0; index < num_featuremap; index++) {
+        float scale_w = width / shrinkage_size[0][index];
+        float scale_h = height / shrinkage_size[1][index];
+        for (int j = 0; j < featuremap_size[1][index]; j++) {
+            for (int i = 0; i < featuremap_size[0][index]; i++) {
+                float x_center = (i + 0.5) / scale_w;
+                float y_center = (j + 0.5) / scale_h;
+
+                for (float k : _min_boxes[index]) {
+                    float w = k / in_w;
+                    float h = k / in_h;
+                    priors.push_back({clip(x_center, 1.f), clip(y_center, 1.f), clip(w, 1.f), clip(h, 1.f)});
+                }
+            }
         }
     }
+
+    // Convert bounding boxes
+    float *score_value = (float*)(buffer[0].buffer.data());
+	float *bbox_value = (float*)(buffer[1].buffer.data());
+    std::vector<Rect> bbox_collection;
+    std::vector<float> score_collection;
+	for (int i = 0; i < priors.size(); i++) {
+		float score = score_value[2 * i + 1];
+		if (score_value[2 * i + 1] > score_threshold) {
+			Rect rect;
+            // Calculate rect coordinates
+			float x_center = bbox_value[i * 4] * center_variance * priors[i][2] + priors[i][0];
+			float y_center = bbox_value[i * 4 + 1] * center_variance * priors[i][3] + priors[i][1];
+			float w = exp(bbox_value[i * 4 + 2] * size_variance) * priors[i][2];
+			float h = exp(bbox_value[i * 4 + 3] * size_variance) * priors[i][3];
+
+            // Add bbox
+			rect.setX((int)(clip(x_center - w / 2.0, 1) * width));
+			rect.setY((int)(clip(y_center - h / 2.0, 1) * height));
+			rect.setW((int)(clip(w, 1) * width));
+			rect.setH((int)(clip(h, 1) * height));
+            bbox_collection.push_back(rects);
+            
+            // Add score
+			score_collection.push_back(clip(score_value[2 * i + 1], 1));
+		}
+	}
+
+    // TODO: add nms
+
     return buffer[0].buffer;
 }
 
