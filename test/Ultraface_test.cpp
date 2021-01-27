@@ -31,7 +31,7 @@ int main()
         //    std::cout << (int)(temp_var) << std::endl;
         //}
 
-        std::vector<float> result = face_detector.execute(image_data, image_width, image_height);
+        std::vector<Rect> result = face_detector.execute(image_data, image_width, image_height);
 
         delete image_data;
     }

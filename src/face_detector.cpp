@@ -1,16 +1,11 @@
 #include "face_detector.hpp"
+#include "utils.hpp"
 
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <cuda_runtime.h>
-
-FaceDetector::FaceDetector(int input_width, int input_length, float score_threshold_, float iou_threshold_)
-{
-
-    
-}
 
 void* FaceDetector::preprocess(void* data, int width, int height)
 {
@@ -63,15 +58,20 @@ void* FaceDetector::preprocess(void* data, int width, int height)
     return gpu_input;
 }
 
-std::vector<float> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer> buffer, int width, int height)
+std::vector<Rect> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer> buffer, int width, int height)
 {
     auto clip = [](float x, float y) {return (x < 0 ? 0 : (x > y ? y : x));};
 
-    w_h_list = {width, height};
+    auto w_h_list = {width, height};
     int num_featuremap = 4;
+    const float center_variance = 0.1;
+	const float size_variance = 0.2;
     std::vector<std::vector<float>> priors = {};
+    std::vector<std::vector<float>> featuremap_size;
+    std::vector<std::vector<float>> shrinkage_size;
     // TODO: see what should be values
     float score_threshold = 0.5;
+    float iou_threshold = 0.8;
 
     for (auto size : w_h_list) {
         std::vector<float> fm_item;
@@ -95,8 +95,8 @@ std::vector<float> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer
                 float y_center = (j + 0.5) / scale_h;
 
                 for (float k : _min_boxes[index]) {
-                    float w = k / in_w;
-                    float h = k / in_h;
+                    float w = k / width;
+                    float h = k / height;
                     priors.push_back({clip(x_center, 1.f), clip(y_center, 1.f), clip(w, 1.f), clip(h, 1.f)});
                 }
             }
@@ -107,7 +107,6 @@ std::vector<float> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer
     float *score_value = (float*)(buffer[0].buffer.data());
 	float *bbox_value = (float*)(buffer[1].buffer.data());
     std::vector<Rect> bbox_collection;
-    std::vector<float> score_collection;
 	for (int i = 0; i < priors.size(); i++) {
 		float score = score_value[2 * i + 1];
 		if (score_value[2 * i + 1] > score_threshold) {
@@ -121,30 +120,29 @@ std::vector<float> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer
             // Add bbox
 			rect.setX((int)(clip(x_center - w / 2.0, 1) * width));
 			rect.setY((int)(clip(y_center - h / 2.0, 1) * height));
-			rect.setW((int)(clip(w, 1) * width));
-			rect.setH((int)(clip(h, 1) * height));
-            bbox_collection.push_back(rects);
-            
-            // Add score
-			score_collection.push_back(clip(score_value[2 * i + 1], 1));
+			rect.setWidth((int)(clip(w, 1) * width));
+			rect.setHeight((int)(clip(h, 1) * height));
+            rect.setScore(clip(score_value[2 * i + 1], 1));
+            bbox_collection.push_back(rect);
 		}
 	}
 
-    // TODO: add nms
+    std::vector<Rect> result_collection;
+    nms(bbox_collection, result_collection, iou_threshold, NmsType::hard);
 
-    return buffer[0].buffer;
+    return result_collection;
 }
 
-std::vector<float> FaceDetector::execute(void* data, int width, int height)
+std::vector<Rect> FaceDetector::execute(void* data, int width, int height)
 {
     void* input_buffer = this->preprocess(data, width, height);
     void* input_array[1];
     input_array[0] = input_buffer;
     std::vector<TRTEngine::OutputBuffer> output_buffer = this->_engine.inference(input_array);
-    std::vector<float> return_vector;
+    std::vector<Rect> return_vector;
     if (output_buffer.size() > 0)
     {
-        return_vector = this->postprocess(output_buffer);
+        return_vector = this->postprocess(output_buffer, width, height);
     }
     return return_vector;
 }

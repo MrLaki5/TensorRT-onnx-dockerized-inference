@@ -17,22 +17,22 @@ Point2D::Point2D(const int& x, const int& y)
     this->_y = y;
 }
 
-inline int Point2D::getX() const
+int Point2D::getX() const
 {
     return this->_x;
 }
 
-inline int Point2D::getY() const
+int Point2D::getY() const
 {
     return this->_y;
 }
 
-inline void Point2D::setX(const int& x) 
+void Point2D::setX(const int& x) 
 {
     this->_x = x;
 }
 
-inline void Point2D::setY(const int& y) 
+void Point2D::setY(const int& y) 
 {
     this->_y = y;
 }
@@ -45,70 +45,83 @@ Rect::Rect()
     this->_top_left_corner = Point2D();
     this->_width = -1;
     this->_height = -1;
+    this->_score = 0;
 }
 
-Rect::Rect(const int& x, const int& y, const int& width, const int& height)
+Rect::Rect(const int& x, const int& y, const int& width, const int& height, const float& score)
 {
     this->_top_left_corner = Point2D(x, y);
     this->_width = width;
     this->_height = height;
+    this->_score = score;
 }
 
-Rect::Rect(const Point2D& top_left_corner, const int& width, const int& height)
+Rect::Rect(const Point2D& top_left_corner, const int& width, const int& height, const float& score)
 {
     this->_top_left_corner = top_left_corner;
     this->_width = width;
     this->_height = height;
+    this->_score = score;
 }
 
-inline Point2D Rect::getTopLeftCorner() const
+Point2D Rect::getTopLeftCorner() const
 {
     return this->_top_left_corner;
 }
 
-inline int Rect::getX() const
+int Rect::getX() const
 {
     return this->_top_left_corner.getX();
 }
 
-inline int Rect::getY() const
+int Rect::getY() const
 {
     return this->_top_left_corner.getY();
 }
 
-inline int Rect::getWidth() const
+int Rect::getWidth() const
 {
     return this->_width;
 }
 
-inline int Rect::getHeight() const
+int Rect::getHeight() const
 {
     return this->_height;
 }
 
-inline void Rect::setTopLeftCorner(const Point2D& top_left_corner) 
+float Rect::getScore() const
+{
+    return this->_score;
+}
+
+void Rect::setTopLeftCorner(const Point2D& top_left_corner) 
 {
     this->_top_left_corner = top_left_corner;
 }
 
-inline void Rect::setX(const int& x) 
+void Rect::setX(const int& x) 
 {
     this->_top_left_corner.setX(x);
 }
 
-inline void Rect::setY(const int& y)
+void Rect::setY(const int& y)
 {
     this->_top_left_corner.setY(y);
 }
 
-inline void Rect::setWidth(const int& width)
+void Rect::setWidth(const int& width)
 {
     this->_width = width;
 }
 
-inline void Rect::setHeight(const int& height)
+void Rect::setHeight(const int& height)
 {
     this->_height = height;
+}
+
+void Rect::setScore(const float& score)
+{
+    this->_score = score;
 }
 
 float Rect::iou(const Rect& rect) const

@@ -1,16 +1,17 @@
 #pragma once
 
 #include "image_processor.hpp"
+#include "data_structures.hpp"
 
 class FaceDetector: public ImageProcessor
 {
     public:
 
-        std::vector<float> execute(void* data, int width, int height);
+        std::vector<Rect> execute(void* data, int width, int height);
 
-        void* preprocess(void* data, int width, int height) override;
+        void* preprocess(void* data, int width, int height);
 
-        std::vector<float> postprocess(std::vector<TRTEngine::OutputBuffer> buffer) override;
+        std::vector<Rect> postprocess(std::vector<TRTEngine::OutputBuffer> buffer, int width, int height);
 
     private:
         const std::vector<float> _strides = {8.0, 16.0, 32.0, 64.0};
