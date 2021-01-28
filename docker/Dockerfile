@@ -2,7 +2,26 @@ FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 COPY ./nv-tensorrt-repo-ubuntu1804-cuda10.2-trt7.2.1.6-ga-20201006_1-1_amd64.deb .
 
-RUN apt update && apt -y install cmake wget unzip ffmpeg zlib1g-dev libv4l-dev
+RUN apt update && apt -y install \
+    pkg-config \
+    build-essential \
+    # OpenCV build
+    cmake \
+    wget \
+    unzip \
+    ffmpeg \
+    zlib1g-dev \
+    libv4l-dev \
+    # OpenCV GUI
+    libgtk2.0-0 \
+    libgtk2.0-dev \
+    libcanberra-gtk-module \
+    # Gstreamer
+    libgstreamer1.0-0 \
+    libgstreamer1.0-dev \
+    gstreamer1.0-plugins-base \
+    libgstreamer-plugins-base1.0-dev
+
 
 # Install tensorrt
 RUN dpkg -x nv-tensorrt-repo-ubuntu1804-cuda10.2-trt7.2.1.6-ga-20201006_1-1_amd64.deb /tmpLocal && \
@@ -25,6 +44,8 @@ RUN mkdir -p /tmp && \
         -D WITH_CUBLAS=1 \
         -D CMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
         -D WITH_TBB=ON \
+        -D WITH_GSTREAMER=ON \
+        -D WITH_GTK=ON \
         .. && \
     make -j$(nproc) && \
     make install && \

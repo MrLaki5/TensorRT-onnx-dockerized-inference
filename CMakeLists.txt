@@ -61,7 +61,8 @@ if(BUILD_ULTRAFACE_TEST)
     # Create executable
     add_executable(${BIN} ${CMAKE_CURRENT_SOURCE_DIR}/test/Ultraface_test.cpp)
     # Link libs
-    target_link_libraries(${BIN} PRIVATE ${LIB})
+    target_link_libraries(${BIN} PRIVATE ${LIB}
+                                 PRIVATE ${OpenCV_LIBS})
     # Include header files
     target_include_directories(${BIN} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
     # Install test dataset

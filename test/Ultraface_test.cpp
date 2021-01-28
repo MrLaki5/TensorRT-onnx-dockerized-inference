@@ -1,6 +1,10 @@
 #include "face_detector.hpp"
 
 #include <fstream>
+#include <opencv2/videoio.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/highgui.hpp>
+#include "opencv2/imgproc.hpp"
 
 int main()
 {
@@ -14,26 +18,47 @@ int main()
     {
         std::cout << "Detector init successful" << std::endl;
 
-        int image_width = 1280;
-        int image_height = 853;
-        // Load image from file
-        std::ifstream p("cat.rgb");  
-        p.seekg( 0, std::ios::end );  
-        size_t image_size = p.tellg();  
-        char* image_data = new char[image_size];  
-        p.seekg(0, std::ios::beg);   
-        p.read(image_data, image_size);  
-        p.close();
+        cv::VideoCapture cam;
+        
+        // Open camera
+        if (!cam.open(2)) 
+        {
+            std::cout << "Error opening the camera" << std::endl;
+            return -1;
+        }
 
-        //for(size_t i=0; i < image_size; i++)
-        //{
-        //    unsigned char temp_var = image_data[i];
-        //    std::cout << (int)(temp_var) << std::endl;
-        //}
+        while(true) 
+        {
+            cv::Mat image;
+            cv::Mat image_infer;
+            cam >> image;
+            // Conver image to 3 chanel RGB, byte per chanel
+            image.convertTo(image, CV_8UC3);
+            cv::cvtColor(image, image_infer, CV_BGR2RGB);
 
-        std::vector<Rect> result = face_detector.execute(image_data, image_width, image_height);
+            cv::Size s = image_infer.size();
+            int image_height = s.height;
+            int image_width = s.width;
+            std::vector<Rect> results = face_detector.execute(image_infer.data, image_width, image_height);
 
-        delete image_data;
+            // Draw bounding boxes
+            for (auto result: results)
+            {
+                cv::Rect rect(result.getX(), result.getY(), result.getWidth(), result.getHeight());
+                cv::rectangle(image, rect, cv::Scalar(0, 255, 0), 2);
+            }
+
+            // Show image
+            cv::imshow("Ultraface test", image);
+            char c = (char)cv::waitKey(25);
+            // Escape key
+            if(c == 27)
+            {
+                break;
+            }
+        }
+        std::cout << "Stoping camera..." << std::endl;
+        cam.release();
     }
     else
     {

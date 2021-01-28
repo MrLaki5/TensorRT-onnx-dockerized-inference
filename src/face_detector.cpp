@@ -70,8 +70,8 @@ std::vector<Rect> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer>
     std::vector<std::vector<float>> featuremap_size;
     std::vector<std::vector<float>> shrinkage_size;
     // TODO: see what should be values
-    float score_threshold = 0.5;
-    float iou_threshold = 0.8;
+    float score_threshold = 0.7;
+    float iou_threshold = 0.3;
 
     for (auto size : w_h_list) {
         std::vector<float> fm_item;
