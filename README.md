@@ -23,3 +23,8 @@ cd ./docker
 * Output: Siamese cat, Siamese (confidence: 0.995392)
 
 <img src="img/cat.jpg" width="400"/><img src="img/out.png" width="400"/>
+
+
+### Ultraface face detector inference
+
+* WIP
