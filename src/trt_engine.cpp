@@ -67,6 +67,7 @@ std::vector<TRTEngine::OutputBuffer> TRTEngine::inference(void* input[])
     for (int i = 0; i < this->_output_dimensions.size(); i++)
     {
         cudaMalloc(&buffers[this->_output_indexes[i]], get_size_by_dim(this->_output_dimensions[i]) * sizeof(float));
+        cudaMemset(buffers[this->_output_indexes[i]], 0.f, get_size_by_dim(this->_output_dimensions[i]) * sizeof(float));
     }
 
     // Do inference

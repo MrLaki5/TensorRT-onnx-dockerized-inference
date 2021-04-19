@@ -35,13 +35,14 @@ void* FaceDetector::preprocess(void* data, int width, int height)
     cv::cuda::resize(gpu_frame, resized, input_size, 0, 0, cv::INTER_NEAREST);
 
     // Normalize image
-    cv::cuda::GpuMat flt_image;
+    cv::cuda::GpuMat flt_image = resized;
     // Range 0 to 1
-    resized.convertTo(flt_image, CV_32FC3, 1.f / 128.f);
+    
     // Subtract mean
-    cv::cuda::subtract(flt_image, cv::Scalar(127.f/128.f, 127.f/128.f, 127.f/128.f), flt_image, cv::noArray(), -1);
+    cv::cuda::subtract(flt_image, cv::Scalar(127, 127, 127), flt_image, cv::noArray(), -1);
+    flt_image.convertTo(flt_image, CV_32FC3);
     // Devide std
-    //cv::cuda::divide(flt_image, cv::Scalar(0.229f, 0.224f, 0.225f), flt_image, 1, -1);
+    cv::cuda::divide(flt_image, cv::Scalar(128.f, 128.f, 128.f), flt_image, 1, -1);
 
     // Allocate memory for trt engine inference input
     float* gpu_input;
@@ -102,13 +103,25 @@ std::vector<Rect> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer>
             }
         }
     }
-
+    int scores_higher_one = 0;
     // Convert bounding boxes
+    std::transform(buffer[0].buffer.begin(), buffer[0].buffer.end(), buffer[0].buffer.begin(), [](float val) {return (val > 0)?std::exp(val):0;});
+    float sum = std::accumulate(buffer[0].buffer.begin(), buffer[0].buffer.end(), 0.0);
+    if (sum > 0)
+    {
+        for (int i = 0; i < buffer[0].buffer.size(); i++)
+        {
+            buffer[0].buffer[i] /= sum;
+        }
+    }
     float *score_value = (float*)(buffer[0].buffer.data());
 	float *bbox_value = (float*)(buffer[1].buffer.data());
     std::vector<Rect> bbox_collection;
 	for (int i = 0; i < priors.size(); i++) {
 		float score = score_value[2 * i + 1];
+        std::cout << (2 * i) << ": " << score << std::endl;
+        std::cout << (2 * i + 1) << ": " << score << std::endl;
+        if (score > 1) scores_higher_one++;
 		if (score_value[2 * i + 1] > score_threshold) {
 			Rect rect;
             // Calculate rect coordinates
@@ -118,15 +131,16 @@ std::vector<Rect> FaceDetector::postprocess(std::vector<TRTEngine::OutputBuffer>
 			float h = exp(bbox_value[i * 4 + 3] * size_variance) * priors[i][3];
 
             // Add bbox
-			rect.setX((int)(clip(x_center - w / 2.0, 1) * width));
-			rect.setY((int)(clip(y_center - h / 2.0, 1) * height));
-			rect.setWidth((int)(clip(w, 1) * width));
-			rect.setHeight((int)(clip(h, 1) * height));
+			rect.setX((int)(bbox_value[i * 4] * width));
+			rect.setY((int)(bbox_value[i * 4 + 1] * height));
+			rect.setWidth((int)((bbox_value[i * 4 + 2] - bbox_value[i * 4 + 0]) * width));
+			rect.setHeight((int)((bbox_value[i * 4 + 3] - bbox_value[i * 4 + 1]) * height));
             rect.setScore(clip(score_value[2 * i + 1], 1));
             bbox_collection.push_back(rect);
 		}
 	}
-
+    std::cout << "Scores higher then 1: " << scores_higher_one << std::endl;
+    //exit(-1);
     std::vector<Rect> result_collection;
     nms(bbox_collection, result_collection, iou_threshold, NmsType::hard);
 
