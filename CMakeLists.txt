@@ -5,10 +5,7 @@ project(tensorrt-engine)
 #================================================================================
 # Set compiler
 #================================================================================
-set(CMAKE_CXX_FLAGS "-std=c++11 -g -O3 -fPIC")
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+set(CMAKE_CXX_FLAGS "-std=c++17 -g -O3 -fPIC")
 
 #================================================================================
 # Build options
@@ -65,8 +62,6 @@ if(BUILD_ULTRAFACE_TEST)
                                  PRIVATE ${OpenCV_LIBS})
     # Include header files
     target_include_directories(${BIN} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    # Install test dataset
-    #install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/cat.rgb DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 #================================================================================

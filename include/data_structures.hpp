@@ -1,65 +1,13 @@
 #pragma once
 
-class Point2D
+template <typename T>
+struct Rect
 {
-    private:
-        int _x;
-        int _y;
+        T x;
+        T y;
+        T w;
+        T h;
+        float conf;
 
-    public:
-
-        Point2D();
-
-        Point2D(const int& x, const int& y);
-
-        int getX() const;
-
-        int getY() const;
-
-        void setX(const int& x);
-
-        void setY(const int& y);
-};
-
-class Rect
-{
-    private:
-        Point2D _top_left_corner;
-        int _width;
-        int _height;
-        float _score;
-
-    public:
-
-        Rect();
-
-        Rect(const int& x, const int& y, const int& width, const int& height, const float& score=0);
-
-        Rect(const Point2D& top_left_corner, const int& width, const int& height, const float& score=0);
-
-        Point2D getTopLeftCorner() const;
-
-        int getX() const;
-
-        int getY() const;
-
-        int getWidth() const;
-
-        int getHeight() const;
-
-        float getScore() const;
-
-        void setTopLeftCorner(const Point2D& top_left_corner);
-
-        void setX(const int& x);
-
-        void setY(const int& y);
-
-        void setWidth(const int& width);
-
-        void setHeight(const int& height);
-
-        void setScore(const float& score);
-
-        float iou(const Rect& rect) const;
+        Rect(T in_x, T in_y, T in_w, T in_h, float in_conf): x(in_x), y(in_y), w(in_w), h(in_h), conf(in_conf) {}
 };
