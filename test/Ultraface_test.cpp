@@ -39,12 +39,12 @@ int main()
             cv::Size s = image_infer.size();
             int image_height = s.height;
             int image_width = s.width;
-            std::vector<Rect> results = face_detector.execute(image_infer.data, image_width, image_height);
+            std::vector<Rect<int>> results = face_detector.execute(image_infer.data, image_width, image_height);
 
             // Draw bounding boxes
             for (auto result: results)
             {
-                cv::Rect rect(result.getX(), result.getY(), result.getWidth(), result.getHeight());
+                cv::Rect rect(result.x, result.y, result.w, result.h);
                 cv::rectangle(image, rect, cv::Scalar(0, 255, 0), 2);
             }
 

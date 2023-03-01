@@ -7,11 +7,11 @@ class FaceDetector: public ImageProcessor
 {
     public:
 
-        std::vector<Rect> execute(void* data, int width, int height);
+        std::vector<Rect<int>> execute(void* data, int width, int height);
 
         void* preprocess(void* data, int width, int height);
 
-        std::vector<Rect> postprocess(std::vector<TRTEngine::OutputBuffer> buffer, int width, int height);
+        std::vector<Rect<int>> postprocess(std::vector<TRTEngine::OutputBuffer> buffer, int width, int height);
 
     private:
         const std::vector<float> _strides = {8.0, 16.0, 32.0, 64.0};

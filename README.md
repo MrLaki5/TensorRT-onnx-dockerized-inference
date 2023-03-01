@@ -26,5 +26,9 @@ cd ./docker
 
 
 ### Ultraface face detector inference
+* Note: for this test, camera device is required. Test will start GUI showing camera stream overlaped with face detections.
+``` bash
+./Ultraface_test
+```
 
-* WIP
+<img src="img/face.png" width="400"/>
